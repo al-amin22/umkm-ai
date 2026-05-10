@@ -1,0 +1,31 @@
+# Laravel
+laravel-app/.env
+laravel-app/.env.backup
+laravel-app/vendor/
+laravel-app/node_modules/
+laravel-app/public/hot
+laravel-app/public/storage
+laravel-app/storage/*.key
+laravel-app/storage/app/
+laravel-app/storage/framework/cache/
+laravel-app/storage/framework/sessions/
+laravel-app/storage/framework/views/
+laravel-app/storage/logs/
+laravel-app/bootstrap/cache/
+laravel-app/.phpunit.result.cache
+
+# wa-service
+wa-service/.env
+wa-service/node_modules/
+wa-service/sessions/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
