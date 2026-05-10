@@ -1,14 +1,16 @@
 {
   "name": "wa-service",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "node --watch index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "WhatsApp bridge service for UMKM AI Platform",
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc10",
     "axios": "^1.16.0",

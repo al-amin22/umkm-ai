@@ -18,6 +18,8 @@ laravel-app/.phpunit.result.cache
 wa-service/.env
 wa-service/node_modules/
 wa-service/sessions/
+wa-service/logs/*.log
+wa-service/logs/pending_queue.json
 
 # OS
 .DS_Store
