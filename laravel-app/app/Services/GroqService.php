@@ -206,6 +206,74 @@ PROMPT;
         return $parsed;
     }
 
+    // ── Generate Konten Sosmed ────────────────────────────────────
+
+    public function generateKonten(array $data): string
+    {
+        $jenisLabel = match ($data['jenis'] ?? 'caption') {
+            'caption'  => 'caption Instagram',
+            'story'    => 'script Instagram Story',
+            'promo'    => 'teks promosi',
+            'whatsapp' => 'pesan broadcast WhatsApp',
+            default    => 'konten media sosial',
+        };
+
+        $platform = $data['platform'] ?? 'instagram';
+        $tone     = $data['tone'] ?? 'friendly';
+        $toko     = $data['nama_toko'] ?? '';
+        $jenis    = $data['jenis_produk'] ?? '';
+
+        $context = $data['produk']
+            ? "Produk: {$data['produk']}\nDeskripsi: {$data['deskripsi']}\nHarga: {$data['harga']}"
+            : "Toko: {$toko} ({$jenis})";
+
+        $prompt = "Buat {$jenisLabel} untuk {$platform} dengan tone {$tone}.\n"
+            . "{$context}\n\n"
+            . "Langsung tulis kontennya tanpa pengantar. "
+            . "Sertakan emoji yang sesuai dan hashtag relevan.";
+
+        return $this->callWithRetry([
+            ['role' => 'system', 'content' => 'Kamu adalah social media specialist untuk UMKM Indonesia. Buat konten yang engaging dan sesuai platform.'],
+            ['role' => 'user',   'content' => $prompt],
+        ]);
+    }
+
+    // ── Analisa Komplain ──────────────────────────────────────────
+
+    public function analisaKomplain(string $deskripsi, string $kategori): array
+    {
+        $systemPrompt = <<<PROMPT
+Kamu adalah customer service manager untuk UMKM Indonesia.
+Kembalikan HANYA JSON valid — tidak ada teks lain.
+
+FORMAT:
+{
+  "sentimen": "negatif|sangat_negatif|netral",
+  "prioritas": "tinggi|sedang|rendah",
+  "saran_respons": "draft balasan empatis dalam 2-3 kalimat bahasa Indonesia"
+}
+PROMPT;
+
+        $userPrompt = "Komplain pelanggan (kategori: {$kategori}):\n\"{$deskripsi}\"";
+
+        $result = $this->callWithRetry([
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user',   'content' => $userPrompt],
+        ]);
+
+        $parsed = json_decode($result, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return [
+                'sentimen'      => 'negatif',
+                'prioritas'     => 'sedang',
+                'saran_respons' => 'Terima kasih atas masukannya. Kami mohon maaf atas ketidaknyamanan ini dan akan segera menindaklanjuti.',
+            ];
+        }
+
+        return $parsed;
+    }
+
     // ── Core API Call ─────────────────────────────────────────────
 
     public function callWithRetry(array $messages, int $maxRetry = 3): string
