@@ -31,6 +31,7 @@ class CommandRouter
         private CustomerService     $customer,
         private PlanGate            $gate,
         private BroadcastService    $broadcast,
+        private AnalitikService     $analitik,
     ) {}
 
     // ── Entry Point ───────────────────────────────────────────────
@@ -141,8 +142,11 @@ class CommandRouter
             'cek_keuangan'       => $this->keuangan->handleRingkasanKeuangan($waNumber, $shop),
             'update_harga'       => $this->product->handleEditProduk($waNumber, array_merge($ent, ['field' => 'harga']), $shop),
 
-            // ── Laporan ─────────────────────────────────────────
-            'lihat_laporan'      => $this->handleLihatLaporan($waNumber, $shop),
+            // ── Laporan & Analitik ───────────────────────────────
+            'lihat_laporan'        => $this->handleLihatLaporan($waNumber, $shop),
+            'analitik_penjualan'   => $this->analitik->handleAnalitikPenjualan($waNumber, $ent, $shop),
+            'insight_bisnis'       => $this->analitik->handleInsightBisnis($waNumber, $shop),
+            'trend_mingguan'       => $this->analitik->handleTrendMingguan($waNumber, $shop),
 
             // ── Konten ──────────────────────────────────────────
             'buat_konten'        => $this->konten->handleBuatKonten($waNumber, $ent, $shop),

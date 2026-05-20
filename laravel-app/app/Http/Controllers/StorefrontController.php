@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\PesananBaru;
 use App\Models\LaporanToken;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Services\AnalitikService;
 use App\Services\CustomerService;
 use App\Services\NotificationService;
 use App\Services\WAService;
@@ -18,6 +20,7 @@ class StorefrontController extends Controller
         private WAService           $wa,
         private NotificationService $notif,
         private CustomerService     $customer,
+        private AnalitikService     $analitik,
     ) {}
 
     // ── Halaman Toko ──────────────────────────────────────────────
@@ -127,18 +130,11 @@ class StorefrontController extends Controller
 
         $order->items()->createMany($orderItems);
 
-        // Upsert data pelanggan secara asynchronous-safe
+        // Upsert data pelanggan
         $this->customer->syncCustomer($shop, $order);
 
-        $nomor = $order->nomor_pesanan ?? "#{$order->id}";
-        $this->notif->dispatch(
-            $shop->id,
-            "🛍️ *Pesanan Baru {$nomor}*\n"
-            . "Dari: {$order->buyer_name}\n"
-            . "Total: " . $this->wa->formatRupiah($totalHarga) . "\n\n"
-            . "Ketik *konfirmasi {$order->id}* untuk konfirmasi.",
-            'urgent'
-        );
+        // Event-driven: listener NotifikasiPesananBaru kirim WA ke owner
+        PesananBaru::dispatch($order->load('items.product'), $shop);
 
         return redirect()->route('storefront.sukses', ['slug' => $slug, 'order' => $order->id]);
     }
@@ -176,21 +172,22 @@ class StorefrontController extends Controller
 
         $bulanIni  = now()->startOfMonth();
         $bulanLalu = now()->subMonth()->startOfMonth();
+        $bulanIniAkhir  = now()->endOfMonth();
+        $bulanLaluAkhir = now()->subMonth()->endOfMonth();
 
         $ordersIni = Order::where('shop_id', $shop->id)
             ->where('status', 'done')
-            ->where('created_at', '>=', $bulanIni)
+            ->whereBetween('created_at', [$bulanIni, $bulanIniAkhir])
             ->with('items.product')
             ->get();
 
-        $ordersLalu = Order::where('shop_id', $shop->id)
+        $omzetIni  = (float) $ordersIni->sum('total_harga');
+        $omzetLalu = (float) Order::where('shop_id', $shop->id)
             ->where('status', 'done')
-            ->whereBetween('created_at', [$bulanLalu, $bulanIni])
-            ->get();
+            ->whereBetween('created_at', [$bulanLalu, $bulanLaluAkhir])
+            ->sum('total_harga');
 
-        $omzetIni  = $ordersIni->sum('total_harga');
-        $omzetLalu = $ordersLalu->sum('total_harga');
-        $growth    = $omzetLalu > 0
+        $growth = $omzetLalu > 0
             ? round((($omzetIni - $omzetLalu) / $omzetLalu) * 100, 1)
             : null;
 
@@ -206,8 +203,30 @@ class StorefrontController extends Controller
             ->take(5)
             ->values();
 
+        // Metrik tambahan
+        $allOrdersIni = Order::where('shop_id', $shop->id)
+            ->whereBetween('created_at', [$bulanIni, $bulanIniAkhir])
+            ->get();
+
+        $pesananCancelled = $allOrdersIni->where('status', 'cancelled')->count();
+        $konversiPct      = $allOrdersIni->count() > 0
+            ? round($ordersIni->count() / $allOrdersIni->count() * 100, 1)
+            : 0;
+
+        $totalPelanggan = \App\Models\Customer::byShop($shop->id)->count();
+        $trendMingguan  = $this->analitik->trendMingguan($shop->id);
+
         return view('storefront.laporan', compact(
-            'shop', 'ordersIni', 'omzetIni', 'omzetLalu', 'growth', 'topProduk'
+            'shop',
+            'ordersIni',
+            'omzetIni',
+            'omzetLalu',
+            'growth',
+            'topProduk',
+            'pesananCancelled',
+            'konversiPct',
+            'totalPelanggan',
+            'trendMingguan',
         ));
     }
 }

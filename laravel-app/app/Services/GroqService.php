@@ -274,6 +274,35 @@ PROMPT;
         return $parsed;
     }
 
+    // ── Generate AI Business Insight ─────────────────────────────
+
+    public function generateInsightBisnis(array $metrik): string
+    {
+        $omzet   = 'Rp ' . number_format($metrik['omzet_bulan_ini'], 0, ',', '.');
+        $trend   = $metrik['trend_pct'] !== null ? $metrik['trend_pct'] . '%' : 'belum ada data pembanding';
+        $context = json_encode($metrik, JSON_UNESCAPED_UNICODE);
+
+        $prompt = <<<PROMPT
+Kamu adalah konsultan bisnis UMKM Indonesia yang berpengalaman.
+Berikan analisis singkat dan rekomendasi praktis berdasarkan data berikut:
+
+{$context}
+
+Format respons:
+1. Analisis situasi saat ini (2-3 kalimat)
+2. Highlight positif dan concern utama
+3. 2-3 rekomendasi aksi konkret yang bisa dilakukan minggu ini
+
+Gunakan bahasa Indonesia yang ramah, singkat, dan langsung ke inti.
+Maksimum 200 kata. Gunakan emoji untuk keterbacaan. Jangan gunakan markdown header.
+PROMPT;
+
+        return $this->callWithRetry([
+            ['role' => 'system', 'content' => 'Kamu adalah konsultan bisnis UMKM Indonesia. Berikan saran praktis berbasis data.'],
+            ['role' => 'user',   'content' => $prompt],
+        ]);
+    }
+
     // ── Core API Call ─────────────────────────────────────────────
 
     public function callWithRetry(array $messages, int $maxRetry = 3): string

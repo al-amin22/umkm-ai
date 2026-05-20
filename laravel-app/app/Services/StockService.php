@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\StokKritis;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\Stock;
@@ -353,16 +354,9 @@ class StockService
 
     private function cekDanNotifikasiKritis(Product $produk, Stock $stok, Shop $shop, string $waNumber): void
     {
-        if ($stok->isHabis()) {
-            $this->notif->dispatch($shop->id,
-                "🔴 Stok *{$produk->nama_produk}* sudah HABIS! Segera restock.",
-                'urgent'
-            );
-        } elseif ($stok->isKritis()) {
-            $this->notif->dispatch($shop->id,
-                "⚠️ Stok *{$produk->nama_produk}* kritis: {$stok->jumlah_sekarang} unit tersisa.",
-                'penting'
-            );
+        if ($stok->isHabis() || $stok->isKritis()) {
+            // Event-driven: listener NotifikasiStokKritis handles WA notification
+            StokKritis::dispatch($produk, $shop, $stok->jumlah_sekarang, $stok->batas_minimum);
         }
     }
 

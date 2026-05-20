@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Events\OrderDone;
+use App\Events\PesananBaru;
 use App\Models\Order;
 use App\Models\Shop;
 use Illuminate\Support\Facades\DB;
@@ -265,8 +267,11 @@ class OrderService
 
         $pesanan->update(['status' => 'done', 'done_at' => now()]);
 
-        // Update statistik pelanggan setelah pesanan selesai
-        $this->customer->updateStatsOnDone($pesanan->fresh());
+        $fresh = $pesanan->fresh();
+
+        // Update statistik pelanggan + dispatch event workflow
+        $this->customer->updateStatsOnDone($fresh);
+        OrderDone::dispatch($fresh);
 
         $this->wa->kirimPesan($waNumber,
             "🎉 *Pesanan #{$pesanan->id} selesai!*\n"

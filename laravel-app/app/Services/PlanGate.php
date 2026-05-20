@@ -59,6 +59,9 @@ class PlanGate
         // ── Growth+ ─────────────────────────────────────────────
         'pelanggan_teratas'  => 'growth',
         'analitik_pelanggan' => 'growth',
+        'analitik_penjualan' => 'growth',
+        'insight_bisnis'     => 'growth',
+        'trend_mingguan'     => 'growth',
         'broadcast'          => 'growth',
         'kirim_broadcast'    => 'growth',
     ];
