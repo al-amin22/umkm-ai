@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LaporanController;
 use App\Http\Controllers\Admin\PesananController;
 use App\Http\Controllers\Admin\ProdukController;
 use App\Http\Controllers\StorefrontController;
@@ -29,6 +30,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{id}/edit',[ProdukController::class, 'edit'])->name('edit');
             Route::put('/{id}',     [ProdukController::class, 'update'])->name('update');
             Route::delete('/{id}',  [ProdukController::class, 'destroy'])->name('destroy');
+        });
+
+        // Laporan
+        Route::prefix('laporan')->name('laporan.')->group(function () {
+            Route::get('/',       [LaporanController::class, 'index'])->name('index');
+            Route::get('/csv',    [LaporanController::class, 'exportCsv'])->name('csv');
+            Route::get('/cetak',  [LaporanController::class, 'cetak'])->name('cetak');
         });
 
         // Pesanan

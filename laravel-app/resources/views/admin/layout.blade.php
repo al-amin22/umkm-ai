@@ -29,6 +29,10 @@
                class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.produk*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
                 🛍️ Produk
             </a>
+            <a href="{{ route('admin.laporan.index') }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.laporan*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
+                📈 Laporan
+            </a>
             <a href="{{ route('storefront.toko', $adminShop->slug) }}" target="_blank"
                class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50">
                 🌐 Lihat Toko ↗
