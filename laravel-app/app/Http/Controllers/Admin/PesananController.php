@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Services\OrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class PesananController extends Controller
@@ -60,6 +61,7 @@ class PesananController extends Controller
             $shop
         );
 
+        $this->flushDashboardCache($shop->id);
         return redirect()->route('admin.pesanan.show', $id)
             ->with('success', "Pesanan #{$id} dikonfirmasi.");
     }
@@ -75,6 +77,7 @@ class PesananController extends Controller
             $shop
         );
 
+        $this->flushDashboardCache($shop->id);
         return redirect()->route('admin.pesanan.show', $id)
             ->with('success', "Status pesanan #{$id} diubah ke Dikirim.");
     }
@@ -89,6 +92,7 @@ class PesananController extends Controller
             $shop
         );
 
+        $this->flushDashboardCache($shop->id);
         return redirect()->route('admin.pesanan.show', $id)
             ->with('success', "Pesanan #{$id} diselesaikan.");
     }
@@ -104,7 +108,16 @@ class PesananController extends Controller
             $shop
         );
 
+        $this->flushDashboardCache($shop->id);
         return redirect()->route('admin.pesanan.show', $id)
             ->with('success', "Pesanan #{$id} dibatalkan.");
+    }
+
+    private function flushDashboardCache(int $shopId): void
+    {
+        Cache::forget("dashboard.metrik.{$shopId}");
+        Cache::forget("dashboard.pending.{$shopId}");
+        Cache::forget("dashboard.confirmed.{$shopId}");
+        Cache::forget("dashboard.trend.{$shopId}");
     }
 }
