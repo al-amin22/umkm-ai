@@ -6,6 +6,7 @@ use App\Models\LaporanToken;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Services\CustomerService;
 use App\Services\NotificationService;
 use App\Services\WAService;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class StorefrontController extends Controller
     public function __construct(
         private WAService           $wa,
         private NotificationService $notif,
+        private CustomerService     $customer,
     ) {}
 
     // ── Halaman Toko ──────────────────────────────────────────────
@@ -123,6 +125,9 @@ class StorefrontController extends Controller
         ]);
 
         $order->items()->createMany($orderItems);
+
+        // Upsert data pelanggan secara asynchronous-safe
+        $this->customer->syncCustomer($shop, $order);
 
         $this->notif->dispatch(
             $shop->id,

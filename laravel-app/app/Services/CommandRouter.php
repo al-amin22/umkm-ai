@@ -20,7 +20,6 @@ class CommandRouter
         private GroqService         $groq,
         private WAService           $wa,
         private SessionService      $session,
-        private NotificationService $notif,
         private LaporanService      $laporan,
         private ProductService      $product,
         private StockService        $stock,
@@ -29,6 +28,7 @@ class CommandRouter
         private KontenService       $konten,
         private KomplainService     $komplain,
         private SubscriptionService $subscription,
+        private CustomerService     $customer,
     ) {}
 
     // ── Entry Point ───────────────────────────────────────────────
@@ -143,6 +143,12 @@ class CommandRouter
             'lihat_komplain'     => $this->komplain->handleLihatKomplain($waNumber, $ent, $shop),
             'pola_komplain'      => $this->komplain->handlePolaKomplain($waNumber, $shop),
 
+            // ── Pelanggan ───────────────────────────────────────
+            'lihat_pelanggan'    => $this->customer->handleLihatPelanggan($waNumber, $shop),
+            'detail_pelanggan'   => $this->customer->handleDetailPelanggan($waNumber, $ent, $shop),
+            'cari_pelanggan'     => $this->customer->handleCariPelanggan($waNumber, $ent, $shop),
+            'pelanggan_teratas'  => $this->customer->handlePelangganTeratas($waNumber, $shop),
+
             // ── Langganan ───────────────────────────────────────
             'cek_langganan'      => $this->subscription->handleCekLangganan($waNumber, $shop),
             'perpanjang'         => $this->subscription->handlePerpanjang($waNumber, $ent, $shop),
@@ -153,7 +159,8 @@ class CommandRouter
             'setting_toko'       => $this->handleSettingToko($waNumber, $shop),
 
             // ── Fallback ────────────────────────────────────────
-            'tidak_dikenali', default => $this->handleTidakDikenali($waNumber),
+            'tidak_dikenali' => $this->handleTidakDikenali($waNumber),
+            default          => $this->handleTidakDikenali($waNumber),
         };
     }
 
@@ -268,6 +275,7 @@ class CommandRouter
             . "• *cek stok* — lihat stok produk\n"
             . "• *hitung hpp [produk]* — kalkulator biaya produksi\n"
             . "• *buat caption [produk]* — konten media sosial\n"
+            . "• *lihat pelanggan* — daftar pelanggan\n"
             . "• *laporan* — laporan penjualan\n\n"
             . "_Ceritakan lebih detail atau ketik *bantuan*._"
         );

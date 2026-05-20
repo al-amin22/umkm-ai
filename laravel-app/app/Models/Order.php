@@ -11,6 +11,7 @@ class Order extends Model
 {
     protected $fillable = [
         'shop_id',
+        'customer_id',
         'buyer_name',
         'buyer_phone',
         'buyer_address',
@@ -38,6 +39,11 @@ class Order extends Model
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function items(): HasMany

@@ -13,6 +13,7 @@ class OrderService
         private SessionService      $session,
         private StockService        $stock,
         private NotificationService $notif,
+        private CustomerService     $customer,
     ) {}
 
     // ── Lihat Pesanan ─────────────────────────────────────────────
@@ -263,6 +264,9 @@ class OrderService
         }
 
         $pesanan->update(['status' => 'done', 'done_at' => now()]);
+
+        // Update statistik pelanggan setelah pesanan selesai
+        $this->customer->updateStatsOnDone($pesanan->fresh());
 
         $this->wa->kirimPesan($waNumber,
             "🎉 *Pesanan #{$pesanan->id} selesai!*\n"
