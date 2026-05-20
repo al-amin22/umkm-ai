@@ -1,0 +1,90 @@
+name: Laravel CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'laravel-app/**'
+      - 'apps/api/**'
+      - '.github/workflows/laravel.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'laravel-app/**'
+      - 'apps/api/**'
+
+jobs:
+  lint-and-test:
+    name: PHP Lint & Syntax Check
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: laravel-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_pgsql, bcmath, json, openssl
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: laravel-app/vendor
+          key: composer-${{ hashFiles('laravel-app/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Copy .env
+        run: cp .env.example .env || echo "APP_KEY=base64:$(openssl rand -base64 32)" > .env
+
+      - name: Generate app key
+        run: php artisan key:generate --ansi 2>/dev/null || true
+
+      - name: PHP syntax check (all files)
+        run: find app config routes database -name "*.php" -print0 | xargs -0 -P4 php -l | grep -v "^No syntax errors" | tee /tmp/syntax_errors.txt; [ ! -s /tmp/syntax_errors.txt ]
+
+      - name: Check for dd/dump/var_dump leaks
+        run: |
+          echo "Checking for debug statements..."
+          FOUND=$(grep -rn --include="*.php" -E '\b(dd|dump|var_dump|ray|debugbar)\(' app/ routes/ || true)
+          if [ -n "$FOUND" ]; then
+            echo "::error::Debug statements found in production code:"
+            echo "$FOUND"
+            exit 1
+          fi
+          echo "No debug statements found."
+
+      - name: Validate composer.json
+        run: composer validate --no-check-all --no-check-publish
+
+  node-lint:
+    name: Node Lint (NestJS API)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --no-progress
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
