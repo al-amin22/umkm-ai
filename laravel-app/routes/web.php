@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LanggananController;
 use App\Http\Controllers\Admin\LaporanController;
 use App\Http\Controllers\Admin\PelangganController;
 use App\Http\Controllers\Admin\PesananController;
@@ -34,6 +35,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{id}/edit',[ProdukController::class, 'edit'])->name('edit');
             Route::put('/{id}',     [ProdukController::class, 'update'])->name('update');
             Route::delete('/{id}',  [ProdukController::class, 'destroy'])->name('destroy');
+        });
+
+        // Langganan
+        Route::prefix('langganan')->name('langganan.')->group(function () {
+            Route::get('/',          [LanggananController::class, 'index'])->name('index');
+            Route::post('/checkout', [LanggananController::class, 'checkout'])->name('checkout');
         });
 
         // Pelanggan

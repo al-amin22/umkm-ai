@@ -37,6 +37,10 @@
                class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.laporan*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
                 📈 Laporan
             </a>
+            <a href="{{ route('admin.langganan.index') }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.langganan*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
+                💳 Langganan
+            </a>
             <a href="{{ route('admin.toko.edit') }}"
                class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.toko*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
                 ⚙️ Pengaturan
