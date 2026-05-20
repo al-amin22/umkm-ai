@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Shop;
 use App\Models\ShopAdmin;
 use App\Models\User;
+use App\Services\SubscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,6 +50,8 @@ class AuthController extends Controller
 
         return redirect()->intended(route('admin.dashboard'));
     }
+
+    public function __construct(private SubscriptionService $subscriptionService) {}
 
     public function registerForm(): View|RedirectResponse
     {
@@ -96,6 +99,8 @@ class AuthController extends Controller
                 'nama'      => $validated['nama'],
                 'email'     => $validated['email'],
             ]);
+
+            $this->subscriptionService->aktivasiTrial($shop->id);
 
             Auth::login($user);
             $request->session()->regenerate();
