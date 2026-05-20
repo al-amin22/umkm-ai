@@ -13,7 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'wa.secret' => \App\Http\Middleware\ValidateWASecret::class,
+            'wa.secret'  => \App\Http\Middleware\ValidateWASecret::class,
+            'admin.shop' => \App\Http\Middleware\AdminShop::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -10,9 +10,12 @@ class ShopAdmin extends Model
 {
     protected $fillable = [
         'shop_id',
+        'user_id',
         'wa_number',
         'role',
         'is_active',
+        'nama',
+        'email',
     ];
 
     protected $casts = [
@@ -24,6 +27,11 @@ class ShopAdmin extends Model
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     // ── Scopes ─────────────────────────────────────────────────────
