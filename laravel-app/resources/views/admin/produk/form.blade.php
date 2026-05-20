@@ -13,6 +13,7 @@
 <div class="max-w-lg">
     <form method="POST"
           action="{{ isset($produk) ? route('admin.produk.update', $produk->id) : route('admin.produk.store') }}"
+          enctype="multipart/form-data"
           class="bg-white rounded-2xl shadow-sm p-6 space-y-4">
         @csrf
         @if(isset($produk)) @method('PUT') @endif
@@ -72,6 +73,25 @@
                               focus:outline-none focus:ring-2 focus:ring-green-500">
                 <p class="text-xs text-gray-400 mt-1">Notifikasi kritis jika stok ≤ nilai ini</p>
             </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Foto Produk</label>
+            <input type="file" name="foto" accept="image/*"
+                   class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm
+                          focus:outline-none focus:ring-2 focus:ring-green-500
+                          file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0
+                          file:text-sm file:font-medium file:bg-green-50 file:text-green-700
+                          hover:file:bg-green-100">
+            @if(isset($produk) && $produk->foto_url)
+                <div class="mt-2 flex items-center gap-3">
+                    <img src="{{ $produk->foto_url }}" alt="Foto"
+                         class="w-16 h-16 object-cover rounded-xl border border-gray-200">
+                    <p class="text-xs text-gray-400">Upload foto baru untuk mengganti foto saat ini.</p>
+                </div>
+            @else
+                <p class="text-xs text-gray-400 mt-1">JPG, PNG, max 5MB (opsional).</p>
+            @endif
         </div>
 
         <div>
