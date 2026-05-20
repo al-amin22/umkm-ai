@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LaporanController;
+use App\Http\Controllers\Admin\PelangganController;
 use App\Http\Controllers\Admin\PesananController;
 use App\Http\Controllers\Admin\ProdukController;
 use App\Http\Controllers\Admin\TokoController;
@@ -31,6 +32,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/{id}/edit',[ProdukController::class, 'edit'])->name('edit');
             Route::put('/{id}',     [ProdukController::class, 'update'])->name('update');
             Route::delete('/{id}',  [ProdukController::class, 'destroy'])->name('destroy');
+        });
+
+        // Pelanggan
+        Route::prefix('pelanggan')->name('pelanggan.')->group(function () {
+            Route::get('/',      [PelangganController::class, 'index'])->name('index');
+            Route::get('/{id}',  [PelangganController::class, 'show'])->name('show');
         });
 
         // Toko Settings
