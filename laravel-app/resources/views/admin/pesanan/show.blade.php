@@ -8,6 +8,10 @@
     <h1 class="text-xl font-bold text-gray-800">
         {{ $pesanan->nomor_pesanan ?? '#'.$pesanan->id }}
     </h1>
+    <a href="{{ route('admin.pesanan.invoice', $pesanan->id) }}" target="_blank"
+       class="ml-auto text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-xl transition">
+        🖨️ Invoice
+    </a>
     @php
         $badge = match($pesanan->status) {
             'pending'   => 'bg-orange-100 text-orange-700',

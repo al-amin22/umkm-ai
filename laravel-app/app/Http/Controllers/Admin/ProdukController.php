@@ -42,6 +42,7 @@ class ProdukController extends Controller
         $shop      = $request->attributes->get('admin_shop');
         $validated = $request->validate([
             'nama_produk'  => 'required|string|max:150',
+            'kategori'     => 'nullable|string|max:100',
             'harga'        => 'required|numeric|min:0',
             'deskripsi'    => 'nullable|string|max:1000',
             'stok_awal'    => 'required|integer|min:0',
@@ -66,6 +67,7 @@ class ProdukController extends Controller
             $produk = Product::create([
                 'shop_id'       => $shop->id,
                 'nama_produk'   => $validated['nama_produk'],
+                'kategori'      => $validated['kategori'] ?? null,
                 'harga'         => $validated['harga'],
                 'deskripsi'     => $validated['deskripsi'] ?? null,
                 'status'        => $validated['status'],
@@ -99,6 +101,7 @@ class ProdukController extends Controller
         $produk    = Product::where('shop_id', $shop->id)->with('stock')->findOrFail($id);
         $validated = $request->validate([
             'nama_produk'  => 'required|string|max:150',
+            'kategori'     => 'nullable|string|max:100',
             'harga'        => 'required|numeric|min:0',
             'deskripsi'    => 'nullable|string|max:1000',
             'stok_sekarang'=> 'required|integer|min:0',
@@ -126,6 +129,7 @@ class ProdukController extends Controller
         DB::transaction(function () use ($produk, $validated, $fotoUrl, $fotoPublicId) {
             $produk->update([
                 'nama_produk'   => $validated['nama_produk'],
+                'kategori'      => $validated['kategori'] ?? null,
                 'harga'         => $validated['harga'],
                 'deskripsi'     => $validated['deskripsi'] ?? null,
                 'status'        => $validated['status'],

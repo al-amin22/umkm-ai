@@ -113,6 +113,16 @@ class PesananController extends Controller
             ->with('success', "Pesanan #{$id} dibatalkan.");
     }
 
+    public function invoice(Request $request, int $id): \Illuminate\View\View
+    {
+        $shop    = $request->attributes->get('admin_shop');
+        $pesanan = Order::where('shop_id', $shop->id)
+            ->with(['items.product', 'customer'])
+            ->findOrFail($id);
+
+        return view('admin.pesanan.invoice', compact('shop', 'pesanan'));
+    }
+
     private function flushDashboardCache(int $shopId): void
     {
         Cache::forget("dashboard.metrik.{$shopId}");

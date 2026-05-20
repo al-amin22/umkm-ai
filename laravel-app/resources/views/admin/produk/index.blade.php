@@ -83,6 +83,10 @@
                         </td>
                         <td class="px-5 py-3 text-right">
                             <div class="flex justify-end gap-2">
+                                <a href="{{ route('admin.stok.riwayat', $p->id) }}"
+                                   class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 hover:bg-gray-100 rounded-lg">
+                                    Stok
+                                </a>
                                 <a href="{{ route('admin.produk.edit', $p->id) }}"
                                    class="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 hover:bg-blue-50 rounded-lg">
                                     Edit

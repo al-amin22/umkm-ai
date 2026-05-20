@@ -37,6 +37,14 @@
                class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.laporan*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
                 📈 Laporan
             </a>
+            <a href="{{ route('admin.stok.opname') }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.stok*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
+                📋 Stok Opname
+            </a>
+            <a href="{{ route('admin.workflow.index') }}"
+               class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.workflow*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
+                🔁 Workflow
+            </a>
             <a href="{{ route('admin.langganan.index') }}"
                class="flex items-center gap-2 px-3 py-2 rounded-lg {{ request()->routeIs('admin.langganan*') ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-600 hover:bg-gray-50' }}">
                 💳 Langganan

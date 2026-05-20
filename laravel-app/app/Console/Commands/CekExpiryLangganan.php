@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Shop;
 use App\Models\Subscription;
+use App\Models\WorkflowLog;
 use App\Services\NotificationService;
 use App\Services\PlanGate;
 use Illuminate\Console\Command;
@@ -79,6 +80,10 @@ class CekExpiryLangganan extends Command
             }
         }
 
+        $total = $expiringSoon->count() + $expiring1Day->count() + $expired->count();
+        WorkflowLog::catat('cek_expiry_langganan', 'success',
+            "7hari={$expiringSoon->count()}, 1hari={$expiring1Day->count()}, expired={$expired->count()}"
+        );
         $this->info("Selesai. Hampir expired: {$expiringSoon->count()}, 1 hari lagi: {$expiring1Day->count()}, Expired: {$expired->count()}");
         return Command::SUCCESS;
     }
