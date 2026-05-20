@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\WAController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -22,3 +23,6 @@ Route::middleware('wa.secret')->prefix('wa')->group(function () {
     // Heartbeat setiap 5 menit dari wa-service
     Route::post('/heartbeat', [WAController::class, 'heartbeat']);
 });
+
+// Midtrans payment notification — tanpa wa.secret, signature divalidasi di controller
+Route::post('/midtrans/webhook', [WebhookController::class, 'midtrans']);
