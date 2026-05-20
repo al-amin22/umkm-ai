@@ -49,8 +49,9 @@
         </form>
     </div>
 
-    <p class="text-center text-xs text-gray-400 mt-6">
-        Belum punya akses? Hubungi admin melalui WhatsApp.
+    <p class="text-center text-sm text-gray-500 mt-4">
+        Belum punya toko?
+        <a href="{{ route('admin.register') }}" class="text-green-600 font-medium hover:underline">Daftar gratis</a>
     </p>
 </div>
 </body>

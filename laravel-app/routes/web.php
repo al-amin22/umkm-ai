@@ -16,9 +16,11 @@ Route::get('/', function () {
 
 // ── Admin Auth ────────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
-    Route::get('/login',  [AuthController::class, 'loginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
-    Route::post('/logout',[AuthController::class, 'logout'])->name('logout');
+    Route::get('/login',     [AuthController::class, 'loginForm'])->name('login');
+    Route::post('/login',    [AuthController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('/logout',   [AuthController::class, 'logout'])->name('logout');
+    Route::get('/register',  [AuthController::class, 'registerForm'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,10');
 
     // Protected admin routes
     Route::middleware(['auth', 'admin.shop'])->group(function () {
