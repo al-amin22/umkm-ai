@@ -97,7 +97,7 @@
                     </td>
                     <td class="py-3 text-center text-gray-600">{{ $item->quantity }}</td>
                     <td class="py-3 text-right text-gray-600">
-                        Rp {{ number_format($item->harga_saat_pesan, 0, ',', '.') }}
+                        Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}
                     </td>
                     <td class="py-3 text-right font-medium text-gray-800">
                         Rp {{ number_format($item->subtotal, 0, ',', '.') }}

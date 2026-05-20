@@ -66,19 +66,25 @@
                         <td class="px-5 py-3">
                             @php
                                 $tipeClass = match($log->tipe) {
-                                    'masuk'   => 'bg-green-100 text-green-700',
-                                    'keluar'  => 'bg-red-100 text-red-700',
+                                    'tambah'  => 'bg-green-100 text-green-700',
+                                    'kurang'  => 'bg-red-100 text-red-700',
                                     'koreksi' => 'bg-blue-100 text-blue-700',
                                     default   => 'bg-gray-100 text-gray-600',
                                 };
+                                $tipeLabel = match($log->tipe) {
+                                    'tambah'  => 'Masuk',
+                                    'kurang'  => 'Keluar',
+                                    'koreksi' => 'Koreksi',
+                                    default   => ucfirst($log->tipe),
+                                };
                             @endphp
                             <span class="px-2.5 py-0.5 rounded-full text-xs font-medium {{ $tipeClass }}">
-                                {{ ucfirst($log->tipe) }}
+                                {{ $tipeLabel }}
                             </span>
                         </td>
                         <td class="px-5 py-3 text-right font-semibold
-                            {{ $log->tipe === 'keluar' ? 'text-red-600' : 'text-green-600' }}">
-                            {{ $log->tipe === 'keluar' ? '-' : '+' }}{{ $log->jumlah }}
+                            {{ $log->tipe === 'kurang' ? 'text-red-600' : 'text-green-600' }}">
+                            {{ $log->tipe === 'kurang' ? '-' : '+' }}{{ $log->jumlah }}
                         </td>
                         <td class="px-5 py-3 text-gray-500">{{ $log->keterangan ?? '—' }}</td>
                     </tr>

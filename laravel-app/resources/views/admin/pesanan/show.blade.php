@@ -43,7 +43,7 @@
                                     {{ $item->product?->nama_produk ?? 'Produk dihapus' }}
                                 </p>
                                 <p class="text-xs text-gray-400">
-                                    {{ $item->quantity }}x @ Rp {{ number_format($item->harga_saat_pesan, 0, ',', '.') }}
+                                    {{ $item->quantity }}x @ Rp {{ number_format($item->harga_satuan, 0, ',', '.') }}
                                 </p>
                             </div>
                         </div>

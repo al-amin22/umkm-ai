@@ -127,10 +127,13 @@ class StockService
             ? ($stok->isHabis() ? '🔴 Habis' : ($stok->isKritis() ? '⚠️ Kritis' : '🟢 Aman'))
             : '❓ Belum ada data stok';
 
+        $jumlahSekarang = $stok?->jumlah_sekarang ?? 0;
+        $batasMinimum   = $stok?->batas_minimum ?? 5;
+
         $lines = [
             "📦 *Stok: {$produk->nama_produk}*",
-            "Jumlah: *{$stok?->jumlah_sekarang ?? 0}* unit",
-            "Batas minimum: {$stok?->batas_minimum ?? 5} unit",
+            "Jumlah: *{$jumlahSekarang}* unit",
+            "Batas minimum: {$batasMinimum} unit",
             "Status: {$status}",
         ];
 
@@ -364,12 +367,13 @@ class StockService
 
     public function kurangiStokOrder(int $productId, int $jumlah, string $keterangan = 'Penjualan'): bool
     {
-        $stok = Stock::where('product_id', $productId)->first();
-        if (! $stok || $stok->jumlah_sekarang < $jumlah) {
-            return false;
-        }
+        $berhasil = false;
 
-        DB::transaction(function () use ($stok, $productId, $jumlah, $keterangan) {
+        DB::transaction(function () use ($productId, $jumlah, $keterangan, &$berhasil) {
+            $stok = Stock::where('product_id', $productId)->lockForUpdate()->first();
+            if (! $stok || $stok->jumlah_sekarang < $jumlah) {
+                return;
+            }
             $stok->decrement('jumlah_sekarang', $jumlah);
             StockLog::create([
                 'product_id' => $productId,
@@ -377,9 +381,10 @@ class StockService
                 'jumlah'     => $jumlah,
                 'keterangan' => $keterangan,
             ]);
+            $berhasil = true;
         });
 
-        return true;
+        return $berhasil;
     }
 
     public function kembalikanStokOrder(int $productId, int $jumlah, string $keterangan = 'Pembatalan'): void

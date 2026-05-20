@@ -105,10 +105,10 @@ class StorefrontController extends Controller
             $totalHarga += $subtotal;
 
             $orderItems[] = [
-                'product_id' => $produk->id,
-                'quantity'   => $item['quantity'],
-                'harga_saat_pesan' => $produk->harga,
-                'subtotal'   => $subtotal,
+                'product_id'   => $produk->id,
+                'quantity'     => $item['quantity'],
+                'harga_satuan' => $produk->harga,
+                'subtotal'     => $subtotal,
             ];
         }
 
