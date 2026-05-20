@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\PaymentLog;
 use App\Services\MidtransService;
 use App\Services\SubscriptionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
@@ -16,21 +16,19 @@ class WebhookController extends Controller
         private SubscriptionService $subscription,
     ) {}
 
-    public function midtrans(Request $request): Response
+    public function midtrans(Request $request): JsonResponse
     {
         $notification = $request->all();
 
         Log::info('Midtrans webhook masuk', ['order_id' => $notification['order_id'] ?? null]);
 
-        // Validasi signature
         if (! $this->midtrans->validateSignature($notification)) {
             Log::warning('Midtrans webhook: signature tidak valid', $notification);
-            return response('Unauthorized', 401);
+            return response()->json(['status' => 'unauthorized'], 401);
         }
 
         $this->midtrans->processNotification($notification);
 
-        // Jika pembayaran berhasil, aktifkan langganan
         $transactionStatus = $notification['transaction_status'] ?? '';
         $fraudStatus       = $notification['fraud_status']       ?? '';
 
@@ -38,12 +36,12 @@ class WebhookController extends Controller
             || $transactionStatus === 'settlement';
 
         if ($isPaid) {
-            $log = PaymentLog::where('order_id', $notification['order_id'])->first();
+            $log = PaymentLog::where('reference_id', $notification['order_id'])->first();
             if ($log) {
                 $this->subscription->aktivasiSetelahBayar($log);
             }
         }
 
-        return response('OK', 200);
+        return response()->json(['status' => 'ok']);
     }
 }

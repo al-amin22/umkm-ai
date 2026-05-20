@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shop;
-use App\Models\ShopAdmin;
 use App\Models\WaSession;
 use App\Services\CommandRouter;
 use App\Services\OnboardingService;
@@ -85,7 +84,7 @@ class WAController extends Controller
 
     // ── Core Processing ───────────────────────────────────────────
 
-    private function prosespesan(string $waNumber, string $pesan, string $tipe, array $data): void
+    private function prosespesan(string $waNumber, string $pesan, string $_tipe, array $_data): void
     {
         // 1. Cari semua toko yang terkait dengan nomor ini (owner atau helper)
         $shops = $this->getAssociatedShops($waNumber);
@@ -123,8 +122,7 @@ class WAController extends Controller
         $waSession = $this->session->getSession($waNumber);
         $ctx       = $waSession->context_data ?? [];
 
-        if (($ctx['menunggu'] ?? false) && str_starts_with($ctx['menunggu'] ?? '', '')) {
-            // Kembalikan ke OnboardingService untuk isian opsional
+        if (str_starts_with($ctx['menunggu'] ?? '', 'onboarding_')) {
             $this->onboarding->handlePesan($waNumber, $pesan);
             return;
         }

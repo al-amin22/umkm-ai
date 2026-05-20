@@ -296,9 +296,11 @@ class OrderService
             return;
         }
 
-        DB::transaction(function () use ($pesanan, $alasan) {
-            // Kembalikan stok jika sudah dikonfirmasi
-            if (in_array($pesanan->status, ['confirmed', 'shipped'])) {
+        // Simpan status sebelum update — dipakai untuk cek stok setelah transaksi
+        $statusSebelum = $pesanan->status;
+
+        DB::transaction(function () use ($pesanan, $alasan, $statusSebelum) {
+            if (in_array($statusSebelum, ['confirmed', 'shipped'])) {
                 foreach ($pesanan->items as $item) {
                     if ($item->product_id) {
                         $this->stock->kembalikanStokOrder(
@@ -318,9 +320,9 @@ class OrderService
         });
 
         $alasanInfo = $alasan ? "\nAlasan: {$alasan}" : '';
+        $stokInfo   = in_array($statusSebelum, ['confirmed', 'shipped']) ? "\nStok sudah dikembalikan." : '';
         $this->wa->kirimPesan($waNumber,
-            "❌ *Pesanan #{$pesanan->id} dibatalkan.*{$alasanInfo}\n"
-            . (_str_contains($pesanan->status ?? '', 'confirmed') ? "Stok sudah dikembalikan." : "")
+            "❌ *Pesanan #{$pesanan->id} dibatalkan.*{$alasanInfo}{$stokInfo}"
         );
     }
 
@@ -352,9 +354,4 @@ class OrderService
                 $order->increment('reminder_count');
             });
     }
-}
-
-// Helper
-function _str_contains(string $haystack, string $needle): bool {
-    return str_contains($haystack, $needle);
 }

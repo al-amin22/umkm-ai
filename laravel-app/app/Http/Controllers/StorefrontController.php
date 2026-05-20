@@ -6,11 +6,18 @@ use App\Models\LaporanToken;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Services\NotificationService;
+use App\Services\WAService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class StorefrontController extends Controller
 {
+    public function __construct(
+        private WAService           $wa,
+        private NotificationService $notif,
+    ) {}
+
     // ── Halaman Toko ──────────────────────────────────────────────
 
     public function toko(string $slug): View|\Illuminate\Http\Response
@@ -117,12 +124,11 @@ class StorefrontController extends Controller
 
         $order->items()->createMany($orderItems);
 
-        // Notifikasi ke pemilik toko via WA (melalui NotificationService)
-        app(\App\Services\NotificationService::class)->dispatch(
+        $this->notif->dispatch(
             $shop->id,
             "🛍️ *Pesanan Baru #{$order->id}*\n"
             . "Dari: {$order->buyer_name}\n"
-            . "Total: " . app(\App\Services\WAService::class)->formatRupiah($totalHarga) . "\n\n"
+            . "Total: " . $this->wa->formatRupiah($totalHarga) . "\n\n"
             . "Ketik *konfirmasi {$order->id}* untuk konfirmasi.",
             'urgent'
         );
@@ -145,7 +151,7 @@ class StorefrontController extends Controller
     public function laporan(string $token): View
     {
         $laporanToken = LaporanToken::where('token', $token)
-            ->where('is_used', false)
+            ->whereNull('used_at')
             ->where('expired_at', '>', now())
             ->with('shop')
             ->first();
@@ -156,7 +162,11 @@ class StorefrontController extends Controller
 
         $laporanToken->markAsUsed();
 
-        $shop      = $laporanToken->shop;
+        $shop = $laporanToken->shop;
+        if (! $shop) {
+            abort(404, 'Data toko tidak ditemukan.');
+        }
+
         $bulanIni  = now()->startOfMonth();
         $bulanLalu = now()->subMonth()->startOfMonth();
 

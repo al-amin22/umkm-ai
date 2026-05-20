@@ -28,19 +28,21 @@ class SubscriptionService
         }
 
         $statusIcon = match ($sub->status) {
-            'trial'   => '🎁',
             'active'  => '✅',
             'grace'   => '⚠️',
             'expired' => '❌',
-            default   => '❓',
+            default   => '🎁',
         };
+
+        // Trial ditandai via plan
+        if ($sub->isTrial()) $statusIcon = '🎁';
 
         $sisaHari = $sub->hariTersisa();
         $expired  = $sub->expired_at?->setTimezone('Asia/Jakarta')->format('d M Y');
 
         $this->wa->kirimPesan($waNumber,
             "💳 *Status Langganan — {$shop->nama_toko}*\n\n"
-            . "Paket: *{$sub->paket}*\n"
+            . "Paket: *{$sub->plan}*\n"
             . "Status: {$statusIcon} *{$sub->status}*\n"
             . "Berlaku sampai: {$expired}\n"
             . "Sisa: *{$sisaHari} hari*\n\n"
@@ -61,11 +63,11 @@ class SubscriptionService
         if (! $pilihanPaket || ! isset($paketList[$pilihanPaket])) {
             $this->wa->kirimPesan($waNumber,
                 "💳 *Pilih Paket Berlangganan*\n\n"
-                . "1️⃣ *Bulanan* — Rp 49.000/bulan\n"
-                . "2️⃣ *Tahunan* — Rp 399.000/tahun _(hemat 32%)_\n\n"
+                . "1️⃣ *Starter* (Bulanan) — Rp 49.000/bulan\n"
+                . "2️⃣ *Growth* (Tahunan) — Rp 399.000/tahun _(hemat 32%)_\n\n"
                 . "Balas:\n"
-                . "• *perpanjang bulanan*\n"
-                . "• *perpanjang tahunan*"
+                . "• *perpanjang starter*\n"
+                . "• *perpanjang growth*"
             );
             return;
         }
@@ -74,18 +76,16 @@ class SubscriptionService
         $result = $this->midtrans->createSnapTransaction($shop, $paket);
 
         if (! $result['success']) {
-            $this->wa->kirimPesan($waNumber,
-                "❌ Gagal membuat link pembayaran. Coba lagi nanti."
-            );
+            $this->wa->kirimPesan($waNumber, "❌ Gagal membuat link pembayaran. Coba lagi nanti.");
             return;
         }
 
-        // Buat record subscription dengan status pending
+        // Buat record subscription dengan status grace (menunggu bayar)
         Subscription::create([
             'shop_id'    => $shop->id,
-            'paket'      => $pilihanPaket,
-            'status'     => 'pending',
-            'harga'      => $paket['harga'],
+            'plan'       => $pilihanPaket,
+            'status'     => 'grace',
+            'mulai_at'   => now(),
             'expired_at' => now()->addDays($paket['hari']),
         ]);
 
@@ -104,9 +104,9 @@ class SubscriptionService
     {
         return Subscription::create([
             'shop_id'    => $shopId,
-            'paket'      => 'trial',
-            'status'     => 'trial',
-            'harga'      => 0,
+            'plan'       => 'trial',
+            'status'     => 'active',
+            'mulai_at'   => now(),
             'expired_at' => now()->addDays($hari),
         ]);
     }
@@ -116,18 +116,17 @@ class SubscriptionService
     public function aktivasiSetelahBayar(PaymentLog $log): void
     {
         $sub = Subscription::where('shop_id', $log->shop_id)
-            ->where('status', 'pending')
+            ->where('status', 'grace')
             ->latest()
             ->first();
 
         if (! $sub) return;
 
         $paketList = $this->midtrans->getPaketList();
-        $hari      = $paketList[$sub->paket]['hari'] ?? 30;
+        $hari      = $paketList[$sub->plan]['hari'] ?? 30;
 
         $sub->update([
             'status'     => 'active',
-            'paid_at'    => now(),
             'expired_at' => now()->addDays($hari),
         ]);
 
@@ -136,7 +135,7 @@ class SubscriptionService
             $shop->update(['status' => 'active']);
             $this->notif->dispatch(
                 $shop->id,
-                "✅ Pembayaran berhasil! Langganan *{$sub->paket}* aktif hingga "
+                "✅ Pembayaran berhasil! Langganan *{$sub->plan}* aktif hingga "
                 . $sub->expired_at->format('d M Y') . ".\nToko kamu sudah aktif kembali.",
                 'urgent'
             );

@@ -16,7 +16,7 @@
         <p class="text-gray-500 mt-1 text-sm">{{ $shop->deskripsi }}</p>
     @endif
     @if($shop->nomor_wa)
-        <a href="https://wa.me/{{ preg_replace('/\D/', '', $shop->nomor_wa) }}"
+        <a href="https://wa.me/{{ preg_replace('/\D/', '', $shop->wa_number_owner) }}"
            target="_blank"
            class="inline-flex items-center gap-1 text-green-600 text-sm mt-2 font-medium">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">

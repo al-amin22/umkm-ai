@@ -25,6 +25,9 @@ class Shop extends Model
         'nama_bank',
         'nama_pemilik_rekening',
         'wa_nomor_darurat',
+        'deskripsi',
+        'logo_url',
+        'banner_url',
     ];
 
     protected $casts = [

@@ -414,6 +414,24 @@ class ProductService
         return true;
     }
 
+    // ── Wrapper untuk CommandRouter ───────────────────────────────
+
+    public function prosesJawabanProduk(string $waNumber, string $pesan, Shop $shop): bool
+    {
+        $ctx     = $this->session->getContextData($waNumber);
+        $context = $ctx['context'] ?? '';
+
+        if ($context === 'tambah_produk') {
+            return $this->prosesJawabanTambahProduk($waNumber, $pesan, $shop);
+        }
+
+        if ($context === 'edit_produk') {
+            return $this->prosesJawabanEditProduk($waNumber, $pesan, $shop);
+        }
+
+        return false;
+    }
+
     // ── Helpers ───────────────────────────────────────────────────
 
     private function updateHarga(string $waNumber, Product $produk, float $harga): void

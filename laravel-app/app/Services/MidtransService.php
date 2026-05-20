@@ -28,11 +28,11 @@ class MidtransService
 
     public function createSnapTransaction(Shop $shop, array $paket): array
     {
-        $orderId = 'SUB-' . $shop->id . '-' . time();
+        $referenceId = 'SUB-' . $shop->id . '-' . time();
 
         $payload = [
             'transaction_details' => [
-                'order_id'     => $orderId,
+                'order_id'     => $referenceId,
                 'gross_amount' => (int) $paket['harga'],
             ],
             'item_details' => [[
@@ -43,10 +43,10 @@ class MidtransService
             ]],
             'customer_details' => [
                 'first_name' => $shop->nama_owner ?? $shop->nama_toko,
-                'phone'      => $shop->nomor_wa,
+                'phone'      => $shop->wa_number_owner,
             ],
             'callbacks' => [
-                'finish'     => config('app.url') . "/toko/{$shop->slug}",
+                'finish' => config('app.url') . "/toko/{$shop->slug}",
             ],
         ];
 
@@ -65,21 +65,26 @@ class MidtransService
 
             $data = $response->json();
 
+            // Simpan ke payment_logs sesuai kolom yang ada di migration
             PaymentLog::create([
-                'shop_id'    => $shop->id,
-                'order_id'   => $orderId,
-                'amount'     => $paket['harga'],
-                'status'     => 'pending',
-                'snap_token' => $data['token'] ?? null,
-                'snap_url'   => $data['redirect_url'] ?? null,
-                'payload'    => $payload,
+                'shop_id'        => $shop->id,
+                'tipe'           => 'langganan',
+                'reference_id'   => $referenceId,
+                'amount'         => $paket['harga'],
+                'payment_method' => 'midtrans_snap',
+                'status'         => 'pending',
+                'webhook_payload'=> [
+                    'snap_token'   => $data['token'] ?? null,
+                    'redirect_url' => $data['redirect_url'] ?? null,
+                    'payload'      => $payload,
+                ],
             ]);
 
             return [
                 'success'      => true,
                 'token'        => $data['token'],
                 'redirect_url' => $data['redirect_url'],
-                'order_id'     => $orderId,
+                'reference_id' => $referenceId,
             ];
 
         } catch (\Exception $e) {
@@ -92,10 +97,10 @@ class MidtransService
 
     public function validateSignature(array $notification): bool
     {
-        $orderId     = $notification['order_id']          ?? '';
-        $statusCode  = $notification['status_code']       ?? '';
-        $grossAmount = $notification['gross_amount']       ?? '';
-        $signature   = $notification['signature_key']     ?? '';
+        $orderId     = $notification['order_id']      ?? '';
+        $statusCode  = $notification['status_code']   ?? '';
+        $grossAmount = $notification['gross_amount']  ?? '';
+        $signature   = $notification['signature_key'] ?? '';
 
         $expected = hash('sha512', $orderId . $statusCode . $grossAmount . $this->serverKey);
 
@@ -106,32 +111,29 @@ class MidtransService
 
     public function processNotification(array $notification): void
     {
-        $orderId           = $notification['order_id']          ?? '';
+        $referenceId       = $notification['order_id']           ?? '';
         $transactionStatus = $notification['transaction_status'] ?? '';
         $fraudStatus       = $notification['fraud_status']       ?? '';
 
-        $log = PaymentLog::where('order_id', $orderId)->first();
+        // Cari berdasarkan reference_id (kolom yang ada)
+        $log = PaymentLog::where('reference_id', $referenceId)->first();
         if (! $log) {
-            Log::warning('MidtransService: order_id tidak ditemukan', ['order_id' => $orderId]);
+            Log::warning('MidtransService: reference_id tidak ditemukan', ['ref' => $referenceId]);
             return;
         }
 
-        $isPaid = $transactionStatus === 'capture' && $fraudStatus === 'accept'
+        $isPaid = ($transactionStatus === 'capture' && $fraudStatus === 'accept')
             || $transactionStatus === 'settlement';
 
         $isCancelled = in_array($transactionStatus, ['cancel', 'deny', 'expire']);
 
-        $log->update([
-            'status'       => $isPaid ? 'paid' : ($isCancelled ? 'failed' : $transactionStatus),
-            'raw_response' => $notification,
-        ]);
+        $newStatus = $isPaid ? 'success' : ($isCancelled ? 'failed' : 'pending');
 
-        if ($isPaid) {
-            $log->shop?->subscription?->update([
-                'status' => 'active',
-                'paid_at' => now(),
-            ]);
-        }
+        $log->update([
+            'status'          => $newStatus,
+            'processed_at'    => now(),
+            'webhook_payload' => array_merge($log->webhook_payload ?? [], ['last_notification' => $notification]),
+        ]);
     }
 
     // ── Daftar Paket ──────────────────────────────────────────────
@@ -139,15 +141,15 @@ class MidtransService
     public function getPaketList(): array
     {
         return [
-            'bulanan' => [
-                'kode'  => 'SUB-BULANAN',
-                'nama'  => 'Bulanan',
+            'starter' => [
+                'kode'  => 'SUB-STARTER',
+                'nama'  => 'Starter',
                 'harga' => 49000,
                 'hari'  => 30,
             ],
-            'tahunan' => [
-                'kode'  => 'SUB-TAHUNAN',
-                'nama'  => 'Tahunan',
+            'growth' => [
+                'kode'  => 'SUB-GROWTH',
+                'nama'  => 'Growth',
                 'harga' => 399000,
                 'hari'  => 365,
             ],

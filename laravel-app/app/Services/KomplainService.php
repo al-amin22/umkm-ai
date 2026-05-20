@@ -9,8 +9,8 @@ use App\Models\Shop;
 class KomplainService
 {
     public function __construct(
-        private WAService   $wa,
-        private GroqService $groq,
+        private WAService      $wa,
+        private GroqService    $groq,
         private SessionService $session,
     ) {}
 
@@ -19,23 +19,20 @@ class KomplainService
     public function handleCatatKomplain(string $waNumber, array $entities, Shop $shop): void
     {
         $deskripsi = $entities['keterangan'] ?? null;
-        $kategori  = $entities['kategori'] ?? 'lainnya';
 
         if (! $deskripsi) {
             $this->session->updateContext($waNumber, 'catat_komplain', [
-                'context'  => 'catat_komplain',
-                'shop_id'  => $shop->id,
-                'kategori' => $kategori,
-                'step'     => 'tanya_deskripsi',
+                'context' => 'catat_komplain',
+                'shop_id' => $shop->id,
+                'step'    => 'tanya_deskripsi',
             ]);
             $this->wa->kirimPesan($waNumber,
-                "📝 *Catat Komplain Pelanggan*\n\n"
-                . "Ceritakan komplain yang diterima:"
+                "📝 *Catat Komplain Pelanggan*\n\nCeritakan komplain yang diterima:"
             );
             return;
         }
 
-        $this->simpanKomplain($waNumber, $shop, $deskripsi, $kategori);
+        $this->simpanKomplain($waNumber, $shop, $deskripsi);
     }
 
     public function prosesJawabanKomplain(string $waNumber, string $pesan, Shop $shop): bool
@@ -43,36 +40,37 @@ class KomplainService
         $ctx = $this->session->getContextData($waNumber);
         if (($ctx['context'] ?? '') !== 'catat_komplain') return false;
 
-        $step = $ctx['step'] ?? '';
-
-        if ($step === 'tanya_deskripsi') {
-            $this->simpanKomplain($waNumber, $shop, $pesan, $ctx['kategori'] ?? 'lainnya');
+        if (($ctx['step'] ?? '') === 'tanya_deskripsi') {
+            $this->simpanKomplain($waNumber, $shop, $pesan);
             return true;
         }
 
         return false;
     }
 
-    private function simpanKomplain(string $waNumber, Shop $shop, string $deskripsi, string $kategori): void
+    private function simpanKomplain(string $waNumber, Shop $shop, string $deskripsi): void
     {
-        $this->wa->kirimPesan($waNumber, "🤖 Menganalisis dan menyiapkan respons...");
+        $this->wa->kirimPesan($waNumber, "🤖 Menganalisis komplain...");
 
-        $analisis = $this->groq->analisaKomplain($deskripsi, $kategori);
+        $analisis = $this->groq->analisaKomplain($deskripsi, 'lainnya');
+
+        $tipe    = $this->mapTipe($analisis['tipe'] ?? 'lainnya');
+        $urgensi = $this->mapUrgensi($analisis['prioritas'] ?? 'sedang');
 
         $komplain = Complaint::create([
-            'shop_id'          => $shop->id,
-            'deskripsi'        => $deskripsi,
-            'kategori'         => $kategori,
-            'sentimen'         => $analisis['sentimen'] ?? 'negatif',
-            'saran_respons'    => $analisis['saran_respons'] ?? '',
-            'prioritas'        => $analisis['prioritas'] ?? 'sedang',
-            'status'           => 'open',
+            'shop_id'         => $shop->id,
+            'buyer_name'      => 'Pelanggan',
+            'pesan_asli'      => $deskripsi,
+            'pesan_ringkasan' => mb_substr($deskripsi, 0, 100),
+            'draft_balasan'   => $analisis['saran_respons'] ?? '',
+            'tipe'            => $tipe,
+            'urgensi'         => $urgensi,
+            'status'          => 'baru',
         ]);
 
-        // Update pola komplain
-        $this->updatePolaKomplain($shop->id, $kategori);
+        $this->updatePolaKomplain($shop->id, $tipe);
 
-        $prioritasIcon = match ($komplain->prioritas) {
+        $urgensiIcon = match ($urgensi) {
             'tinggi' => '🔴',
             'sedang' => '⚠️',
             default  => '🟡',
@@ -80,10 +78,10 @@ class KomplainService
 
         $this->wa->kirimPesan($waNumber,
             "📝 *Komplain #" . $komplain->id . " tercatat*\n\n"
-            . "Kategori: {$kategori}\n"
-            . "Prioritas: {$prioritasIcon} {$komplain->prioritas}\n\n"
-            . "*Saran Respons ke Pelanggan:*\n"
-            . "_{$komplain->saran_respons}_\n\n"
+            . "Tipe: {$tipe}\n"
+            . "Urgensi: {$urgensiIcon} {$urgensi}\n\n"
+            . "*Saran Balasan ke Pelanggan:*\n"
+            . "_{$komplain->draft_balasan}_\n\n"
             . "Ketik *selesai komplain {$komplain->id}* jika sudah ditangani."
         );
 
@@ -94,7 +92,7 @@ class KomplainService
 
     public function handleLihatKomplain(string $waNumber, array $entities, Shop $shop): void
     {
-        $statusFilter = $entities['status'] ?? 'open';
+        $statusFilter = $entities['status'] ?? 'baru';
 
         $komplains = Complaint::where('shop_id', $shop->id)
             ->where('status', $statusFilter)
@@ -107,14 +105,14 @@ class KomplainService
             return;
         }
 
-        $prioritasIcon = ['tinggi' => '🔴', 'sedang' => '⚠️', 'rendah' => '🟡'];
+        $urgensiIcon = ['tinggi' => '🔴', 'sedang' => '⚠️', 'rendah' => '🟡'];
 
         $lines = ["😤 *Komplain {$statusFilter} (" . $komplains->count() . ")*\n"];
         foreach ($komplains as $k) {
-            $icon    = $prioritasIcon[$k->prioritas] ?? '🟡';
+            $icon    = $urgensiIcon[$k->urgensi] ?? '🟡';
             $tanggal = $k->created_at->setTimezone('Asia/Jakarta')->format('d/m');
-            $preview = mb_substr($k->deskripsi, 0, 50) . '...';
-            $lines[] = "{$icon} *#{$k->id}* [{$k->kategori}] {$tanggal}";
+            $preview = mb_substr($k->pesan_asli, 0, 50) . '...';
+            $lines[] = "{$icon} *#{$k->id}* [{$k->tipe}] {$tanggal}";
             $lines[] = "   _{$preview}_\n";
         }
 
@@ -133,27 +131,32 @@ class KomplainService
             return;
         }
 
-        $komplain = Complaint::where('shop_id', $shop->id)
-            ->where('id', (int) $komplainId)
-            ->first();
+        $komplain = Complaint::where('shop_id', $shop->id)->where('id', (int) $komplainId)->first();
 
         if (! $komplain) {
             $this->wa->kirimPesan($waNumber, "Komplain #{$komplainId} tidak ditemukan.");
             return;
         }
 
+        $statusLabel = match ($komplain->status) {
+            'baru'       => '🆕 Baru',
+            'diteruskan' => '📤 Diteruskan',
+            'dibalas'    => '💬 Dibalas',
+            'selesai'    => '✅ Selesai',
+            default      => $komplain->status,
+        };
+
         $tanggal = $komplain->created_at->setTimezone('Asia/Jakarta')->format('d M Y H:i');
-        $statusLabel = $komplain->status === 'open' ? '🔓 Open' : '✅ Selesai';
 
         $this->wa->kirimPesan($waNumber,
             "📋 *Detail Komplain #{$komplain->id}*\n\n"
             . "Status: {$statusLabel}\n"
-            . "Kategori: {$komplain->kategori}\n"
-            . "Prioritas: {$komplain->prioritas}\n"
+            . "Tipe: {$komplain->tipe}\n"
+            . "Urgensi: {$komplain->urgensi}\n"
             . "Tanggal: {$tanggal}\n\n"
-            . "*Deskripsi:*\n_{$komplain->deskripsi}_\n\n"
-            . "*Saran Respons:*\n_{$komplain->saran_respons}_"
-            . ($komplain->status === 'open'
+            . "*Pesan Asli:*\n_{$komplain->pesan_asli}_\n\n"
+            . "*Saran Balasan:*\n_{$komplain->draft_balasan}_"
+            . ($komplain->status !== 'selesai'
                 ? "\n\nKetik *selesai komplain {$komplain->id}* jika sudah ditangani."
                 : "")
         );
@@ -172,7 +175,7 @@ class KomplainService
 
         $komplain = Complaint::where('shop_id', $shop->id)
             ->where('id', (int) $komplainId)
-            ->where('status', 'open')
+            ->where('status', '!=', 'selesai')
             ->first();
 
         if (! $komplain) {
@@ -180,11 +183,10 @@ class KomplainService
             return;
         }
 
-        $komplain->update(['status' => 'resolved', 'resolved_at' => now()]);
+        $komplain->update(['status' => 'selesai']);
 
         $this->wa->kirimPesan($waNumber,
-            "✅ Komplain #{$komplain->id} ditandai selesai!\n"
-            . "Kategori: {$komplain->kategori}"
+            "✅ Komplain #{$komplain->id} ditandai selesai!\nTipe: {$komplain->tipe}"
         );
     }
 
@@ -204,30 +206,51 @@ class KomplainService
 
         $lines = ["📊 *Pola Komplain Terbanyak*\n"];
         foreach ($pola as $p) {
-            $lines[] = "• {$p->kategori}: *{$p->jumlah}x*";
-            if ($p->saran_perbaikan) {
-                $lines[] = "  _{$p->saran_perbaikan}_";
-            }
+            $lines[] = "• {$p->tipe_komplain}: *{$p->jumlah}x* ({$p->periode})";
         }
 
         $this->wa->kirimPesan($waNumber, implode("\n", $lines));
     }
 
-    // ── Helper ────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────
 
-    private function updatePolaKomplain(int $shopId, string $kategori): void
+    private function mapTipe(string $tipe): string
     {
+        return match (strtolower($tipe)) {
+            'rusak', 'broken'     => 'rusak',
+            'telat', 'late'       => 'telat',
+            'salah_item', 'wrong' => 'salah_item',
+            'kualitas', 'quality' => 'kualitas',
+            default               => 'lainnya',
+        };
+    }
+
+    private function mapUrgensi(string $prioritas): string
+    {
+        return match (strtolower($prioritas)) {
+            'tinggi', 'high', 'urgent' => 'tinggi',
+            'rendah', 'low'            => 'rendah',
+            default                    => 'sedang',
+        };
+    }
+
+    private function updatePolaKomplain(int $shopId, string $tipeKomplain): void
+    {
+        $periode = now()->format('Y-m');
+
         $pola = ComplaintPattern::where('shop_id', $shopId)
-            ->where('kategori', $kategori)
+            ->where('tipe_komplain', $tipeKomplain)
+            ->where('periode', $periode)
             ->first();
 
         if ($pola) {
             $pola->increment('jumlah');
         } else {
             ComplaintPattern::create([
-                'shop_id'  => $shopId,
-                'kategori' => $kategori,
-                'jumlah'   => 1,
+                'shop_id'       => $shopId,
+                'tipe_komplain' => $tipeKomplain,
+                'jumlah'        => 1,
+                'periode'       => $periode,
             ]);
         }
     }

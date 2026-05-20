@@ -25,6 +25,9 @@ return new class extends Migration
             $table->string('nama_bank')->nullable();
             $table->string('nama_pemilik_rekening')->nullable();
             $table->string('wa_nomor_darurat')->nullable();
+            $table->text('deskripsi')->nullable();
+            $table->string('logo_url')->nullable();
+            $table->string('banner_url')->nullable();
             $table->timestamps();
         });
     }
