@@ -29,6 +29,8 @@ class CommandRouter
         private KomplainService     $komplain,
         private SubscriptionService $subscription,
         private CustomerService     $customer,
+        private PlanGate            $gate,
+        private BroadcastService    $broadcast,
     ) {}
 
     // ── Entry Point ───────────────────────────────────────────────
@@ -62,6 +64,10 @@ class CommandRouter
             if ($this->komplain->prosesJawabanKomplain($waNumber, $pesan, $shop)) return;
         }
 
+        if ($activeContext === 'buat_broadcast') {
+            if ($this->broadcast->prosesJawabanBroadcast($waNumber, $pesan, $shop)) return;
+        }
+
         // 3. Parse intent via Groq
         $konteks = array_filter([
             'intent_sebelumnya' => $ctx['intent_terakhir'] ?? null,
@@ -83,6 +89,11 @@ class CommandRouter
 
         if (in_array($intent['intent'], $this->destructiveIntents)) {
             $this->mintaKonfirmasi($waNumber, $intent, $shop);
+            return;
+        }
+
+        // Feature gating — cek plan sebelum dispatch
+        if (! $this->gate->allow($waNumber, $intent['intent'], $shop)) {
             return;
         }
 
@@ -144,10 +155,12 @@ class CommandRouter
             'pola_komplain'      => $this->komplain->handlePolaKomplain($waNumber, $shop),
 
             // ── Pelanggan ───────────────────────────────────────
-            'lihat_pelanggan'    => $this->customer->handleLihatPelanggan($waNumber, $shop),
-            'detail_pelanggan'   => $this->customer->handleDetailPelanggan($waNumber, $ent, $shop),
-            'cari_pelanggan'     => $this->customer->handleCariPelanggan($waNumber, $ent, $shop),
-            'pelanggan_teratas'  => $this->customer->handlePelangganTeratas($waNumber, $shop),
+            'lihat_pelanggan'      => $this->customer->handleLihatPelanggan($waNumber, $shop),
+            'detail_pelanggan'     => $this->customer->handleDetailPelanggan($waNumber, $ent, $shop),
+            'cari_pelanggan'       => $this->customer->handleCariPelanggan($waNumber, $ent, $shop),
+            'pelanggan_teratas'    => $this->customer->handlePelangganTeratas($waNumber, $shop),
+            'analitik_pelanggan'   => $this->customer->handleAnalitikPelanggan($waNumber, $shop),
+            'broadcast'            => $this->broadcast->handleBuatBroadcast($waNumber, $ent, $shop),
 
             // ── Langganan ───────────────────────────────────────
             'cek_langganan'      => $this->subscription->handleCekLangganan($waNumber, $shop),

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Shop;
 use App\Models\Subscription;
 use App\Services\NotificationService;
+use App\Services\PlanGate;
 use Illuminate\Console\Command;
 
 class CekExpiryLangganan extends Command
@@ -12,8 +13,10 @@ class CekExpiryLangganan extends Command
     protected $signature   = 'umkm:cek-expiry';
     protected $description = 'Cek langganan yang hampir/sudah expired dan kirim notifikasi';
 
-    public function __construct(private NotificationService $notif)
-    {
+    public function __construct(
+        private NotificationService $notif,
+        private PlanGate            $gate,
+    ) {
         parent::__construct();
     }
 
@@ -66,6 +69,7 @@ class CekExpiryLangganan extends Command
 
             if ($sub->shop) {
                 $sub->shop->update(['status' => 'inactive']);
+                $this->gate->flushCache($sub->shop_id);
                 $this->notif->dispatch(
                     $sub->shop_id,
                     "❌ Langganan toko *{$sub->shop->nama_toko}* telah berakhir. Toko dinonaktifkan.\n"

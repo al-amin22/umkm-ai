@@ -114,14 +114,15 @@ class StorefrontController extends Controller
         }
 
         $order = Order::create([
-            'shop_id'       => $shop->id,
-            'buyer_name'    => $validated['buyer_name'],
-            'buyer_phone'   => $validated['buyer_phone'],
-            'buyer_address' => $validated['buyer_address'],
-            'buyer_city'    => $validated['buyer_city'] ?? null,
-            'catatan'       => $validated['catatan'] ?? null,
-            'total_harga'   => $totalHarga,
-            'status'        => 'pending',
+            'shop_id'        => $shop->id,
+            'nomor_pesanan'  => Order::generateNomor($shop->id),
+            'buyer_name'     => $validated['buyer_name'],
+            'buyer_phone'    => $validated['buyer_phone'],
+            'buyer_address'  => $validated['buyer_address'],
+            'buyer_city'     => $validated['buyer_city'] ?? null,
+            'catatan'        => $validated['catatan'] ?? null,
+            'total_harga'    => $totalHarga,
+            'status'         => 'pending',
         ]);
 
         $order->items()->createMany($orderItems);
@@ -129,9 +130,10 @@ class StorefrontController extends Controller
         // Upsert data pelanggan secara asynchronous-safe
         $this->customer->syncCustomer($shop, $order);
 
+        $nomor = $order->nomor_pesanan ?? "#{$order->id}";
         $this->notif->dispatch(
             $shop->id,
-            "🛍️ *Pesanan Baru #{$order->id}*\n"
+            "🛍️ *Pesanan Baru {$nomor}*\n"
             . "Dari: {$order->buyer_name}\n"
             . "Total: " . $this->wa->formatRupiah($totalHarga) . "\n\n"
             . "Ketik *konfirmasi {$order->id}* untuk konfirmasi.",

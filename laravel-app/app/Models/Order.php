@@ -12,6 +12,7 @@ class Order extends Model
     protected $fillable = [
         'shop_id',
         'customer_id',
+        'nomor_pesanan',
         'buyer_name',
         'buyer_phone',
         'buyer_address',
@@ -98,5 +99,26 @@ class Order extends Model
     public function getTotalHargaFormatAttribute(): string
     {
         return 'Rp ' . number_format((float) $this->total_harga, 0, ',', '.');
+    }
+
+    /**
+     * Generate nomor pesanan unik per toko per hari.
+     * Format: ORD-YYYYMMDD-NNN (sekuensial per toko per hari, mulai dari 001)
+     */
+    public static function generateNomor(int $shopId): string
+    {
+        $today  = now()->format('Ymd');
+        $prefix = "ORD-{$today}-";
+
+        $last = self::where('shop_id', $shopId)
+            ->where('nomor_pesanan', 'like', "{$prefix}%")
+            ->orderByDesc('id')
+            ->value('nomor_pesanan');
+
+        $seq = $last
+            ? (int) substr($last, strrpos($last, '-') + 1) + 1
+            : 1;
+
+        return $prefix . str_pad($seq, 3, '0', STR_PAD_LEFT);
     }
 }

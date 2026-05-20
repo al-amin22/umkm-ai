@@ -19,3 +19,6 @@ Schedule::command('umkm:cek-expiry')->dailyAt('09:00');
 
 // 03:00 setiap hari — cleanup stale sessions
 Schedule::command('umkm:cleanup-sessions')->dailyAt('03:00');
+
+// 02:00 setiap hari — hitung ulang RFM semua pelanggan
+Schedule::command('umkm:recalculate-rfm')->dailyAt('02:00');

@@ -43,7 +43,7 @@ class CustomerService
         });
     }
 
-    // Dipanggil saat pesanan selesai (done) untuk update statistik akumulatif.
+    // Dipanggil saat pesanan selesai (done) untuk update statistik + RFM.
 
     public function updateStatsOnDone(Order $order): void
     {
@@ -54,6 +54,44 @@ class CustomerService
             'total_belanja' => DB::raw("total_belanja + {$order->total_harga}"),
             'last_order_at' => $order->done_at ?? now(),
         ]);
+
+        // Hitung ulang RFM setelah statistik di-update
+        $customer = Customer::find($order->customer_id);
+        if ($customer) {
+            $this->recalculateRfm($customer);
+        }
+    }
+
+    // ── RFM ───────────────────────────────────────────────────────
+
+    public function recalculateRfm(Customer $customer): void
+    {
+        $r       = $customer->hitungSkorR();
+        $f       = $customer->hitungSkorF();
+        $m       = $customer->hitungSkorM();
+        $segment = Customer::klasifikasiSegmen($r, $f, $m);
+
+        $customer->update([
+            'rfm_r'       => $r,
+            'rfm_f'       => $f,
+            'rfm_m'       => $m,
+            'rfm_segment' => $segment,
+        ]);
+    }
+
+    /**
+     * Hitung ulang RFM semua pelanggan toko — dipanggil oleh Artisan command.
+     */
+    public function recalculateAllRfm(int $shopId): int
+    {
+        $count = 0;
+        Customer::byShop($shopId)->chunkById(100, function ($customers) use (&$count) {
+            foreach ($customers as $c) {
+                $this->recalculateRfm($c);
+                $count++;
+            }
+        });
+        return $count;
     }
 
     // ── WA Handlers ───────────────────────────────────────────────
@@ -221,6 +259,46 @@ class CustomerService
             $medal   = match ($no) { 1 => '🥇', 2 => '🥈', 3 => '🥉', default => "{$no}." };
             $lines[] = "{$medal} *{$c->nama}*";
             $lines[] = "   " . $this->wa->formatRupiah($c->total_belanja) . " · {$c->total_pesanan}x pesanan";
+        }
+
+        $this->wa->kirimPesan($waNumber, implode("\n", $lines));
+    }
+
+    public function handleAnalitikPelanggan(string $waNumber, Shop $shop): void
+    {
+        $total      = Customer::byShop($shop->id)->count();
+        $baru       = Customer::byShop($shop->id)->bySegment('Baru')->count();
+        $champions  = Customer::byShop($shop->id)->bySegment('Champions')->count();
+        $loyal      = Customer::byShop($shop->id)->bySegment('Loyal')->count();
+        $beresiko   = Customer::byShop($shop->id)->bySegment('Beresiko')->count();
+        $tidur      = Customer::byShop($shop->id)->bySegment('Tidur')->count();
+
+        $totalBelanja = Customer::byShop($shop->id)->sum('total_belanja');
+        $avgBelanja   = $total > 0 ? $totalBelanja / $total : 0;
+
+        $lines = [
+            "📊 *Analitik Pelanggan — {$shop->nama_toko}*\n",
+            "Total pelanggan: *{$total}*",
+            "Rata-rata belanja: *" . $this->wa->formatRupiah($avgBelanja) . "*",
+            "",
+            "*Segmen RFM:*",
+            "🏆 Champions : {$champions}",
+            "💙 Loyal     : {$loyal}",
+            "🌱 Baru      : {$baru}",
+            "⚠️ Beresiko  : {$beresiko}",
+            "😴 Tidur     : {$tidur}",
+            "",
+        ];
+
+        // Rekomendasi aksi berdasarkan segmen
+        if ($beresiko > 0) {
+            $lines[] = "💡 *{$beresiko} pelanggan beresiko churn* — pertimbangkan kirim promo khusus.";
+        }
+        if ($tidur > 0) {
+            $lines[] = "💡 *{$tidur} pelanggan tidak aktif* — coba re-engagement broadcast.";
+        }
+        if ($champions > 0) {
+            $lines[] = "💡 *{$champions} Champions* — berikan apresiasi agar tetap loyal.";
         }
 
         $this->wa->kirimPesan($waNumber, implode("\n", $lines));

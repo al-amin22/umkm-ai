@@ -12,6 +12,7 @@ class SubscriptionService
         private WAService       $wa,
         private MidtransService $midtrans,
         private NotificationService $notif,
+        private PlanGate        $gate,
     ) {}
 
     // ── Lihat Status Langganan ────────────────────────────────────
@@ -102,13 +103,17 @@ class SubscriptionService
 
     public function aktivasiTrial(int $shopId, int $hari = 14): Subscription
     {
-        return Subscription::create([
+        $sub = Subscription::create([
             'shop_id'    => $shopId,
             'plan'       => 'trial',
             'status'     => 'active',
             'mulai_at'   => now(),
             'expired_at' => now()->addDays($hari),
         ]);
+
+        $this->gate->flushCache($shopId);
+
+        return $sub;
     }
 
     // ── Aktifkan Setelah Pembayaran ───────────────────────────────
@@ -133,6 +138,7 @@ class SubscriptionService
         $shop = $sub->shop;
         if ($shop) {
             $shop->update(['status' => 'active']);
+            $this->gate->flushCache($shop->id);
             $this->notif->dispatch(
                 $shop->id,
                 "✅ Pembayaran berhasil! Langganan *{$sub->plan}* aktif hingga "

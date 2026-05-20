@@ -10,7 +10,6 @@ class OrderService
 {
     public function __construct(
         private WAService           $wa,
-        private SessionService      $session,
         private StockService        $stock,
         private NotificationService $notif,
         private CustomerService     $customer,
@@ -49,7 +48,8 @@ class OrderService
             };
 
             $namaItem = $p->items->map(fn ($i) => "{$i->quantity}x {$i->product?->nama_produk}")->implode(', ');
-            $lines[]  = "{$statusIcon} *#{$p->id}* — {$p->buyer_name}";
+            $nomor    = $p->nomor_pesanan ?? "#{$p->id}";
+            $lines[]  = "{$statusIcon} *{$nomor}* — {$p->buyer_name}";
             $lines[]  = "   {$namaItem}";
             $lines[]  = "   💰 " . $this->wa->formatRupiah($p->total_harga);
             $lines[]  = "";
